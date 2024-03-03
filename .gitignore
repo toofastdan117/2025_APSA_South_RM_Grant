@@ -1,0 +1,12 @@
+# Files to ignore
+AAMC Data.Rproj
+.Rhistory
+.RData
+
+# Folders to ignore 
+/.Rproj.user
+/__pycache__
+/A-2
+/A-5
+/A-16
+/B-10
