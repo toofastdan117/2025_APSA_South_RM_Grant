@@ -54,10 +54,11 @@ mf_gb <- mf_gb %>% pivot_longer(cols = c(male_applicant_percent, female_applican
 mf_gb[c("sex", "app_status", "per")] <- str_split_fixed(string = mf_gb$app_mat, pattern = "_", 3)
 mf_gb$APSA_region_sex <- paste0(mf_gb$APSA_region, " ", mf_gb$sex)
 mf_gb$APSA_region_sex <- factor(x = mf_gb$APSA_region_sex, levels = c("Mid-Atlantic male", "Midwest male", "Northeast male", "South male", "West male", "Mid-Atlantic female", "Midwest female", "Northeast female", "South female", "West female"))
+mf_gb$APSA_region <- factor(x = mf_gb$APSA_region, levels = c("Mid-Atlantic", "Midwest", "Northeast", "West", "South"))
 ```
 
 ```{r}
-# Graphing
+# Graphing MD and MD/PhD
 mf_plot <- mf_gb %>% ggplot(aes(x = cycle_year, y = percent, color = APSA_region_sex, shape = sex)) + 
   geom_line() + 
   geom_point(size = 2) + 
@@ -74,6 +75,53 @@ mf_plot
 # Exporting the graph
 #ggsave(plot = mf_plot, filename = paste0(cwd, "/plots/male_female_AAMC.png"), width = 2500, height = 1600, dpi = 300, units = "px")
 ```
+
+```{r}
+mf_gb2 <- mf_gb %>% 
+  dplyr::filter(degree == "MD/PhD", sex == "female") %>% 
+  mutate(
+    southern_status = case_when(
+      APSA_region == "South" ~ "South",
+      APSA_region != "South" ~ "Other Regions"
+    )
+    )
+mf_gb2$southern_status <- factor(x = mf_gb2$southern_status, levels = c("Other Regions", "South"))
+
+standard_error <- function(x) {
+  std_err = sd(x) / sqrt(length(x))
+  return(std_err)
+}
+
+mf_gb2 <- mf_gb2 %>% group_by(southern_status, app_status, cycle_year) %>% 
+  summarise(
+    mean_percent = mean(percent),
+    sem_percent = standard_error(percent)
+  )
+```
+
+```{r}
+# Graphing MD/PhD only 
+mf_plot3 <- mf_gb2 %>% 
+  ggplot(aes(x = cycle_year, y = mean_percent, ymin = mean_percent - sem_percent, ymax = mean_percent + sem_percent, color = southern_status, shape = app_status, linetype = factor(app_status))) + 
+  geom_errorbar(width = 0.2, linetype = "solid") +
+  geom_line() + 
+  geom_point(size = 2) + 
+  scale_linetype_manual(values = c("dashed", "solid")) + 
+  scale_shape_manual(values = c(1, 19)) +
+  scale_color_manual(values = c("#d1d1d1", "#bd0202")) + 
+  scale_x_continuous(breaks = scales::pretty_breaks(n = 10)) + 
+  theme_classic() + 
+  labs(x = "Year", y = "Percent Female", color = "Region", shape = "Application Status", title = "MD/PhD Female Admissions") + 
+  theme(axis.text.x = element_text(angle = 45, hjust = 1),
+        plot.title = element_text(hjust = 0.5))
+mf_plot3
+
+# Exporting the graph
+#ggsave(plot = mf_plot3, filename = paste0(cwd, "/plots/female_percent_AAMC.pdf"), width = 1500, height = 1000, dpi = 300, units = "px")
+```
+
+
+
 
 # Importing the required files for number of applicants over time
 
@@ -109,14 +157,37 @@ tots_plot <- tots %>% ggplot(aes(x = cycle_year, y = percent_change, color = deg
   scale_color_manual(values = c("#01016f", "#d8031c")) + 
   scale_x_continuous(breaks = scales::pretty_breaks(n = 10)) + 
   theme_bw() + 
-  labs(x = "Year", y = "Percent Change Relative to 2012", color = "Degree", title = "Number of Applicants and Matriculants Over Time") + 
+  labs(x = "Year", y = "Percent Change Relative to 2012", color = "Degree", title = "Trends in MD & MD/PhD Applicants and Matriculants") + 
   theme(axis.text.x = element_text(angle = 45, hjust = 1),
         plot.title = element_text(hjust = 0.5))
 tots_plot
  
 # Exporting the graph
-#ggsave(plot = tots_plot, filename = paste0(cwd, "/plots/totals_AAMC.pdf"), width = 2500, height = 1300, dpi = 300, units = "px")
+#ggsave(plot = tots_plot, filename = paste0(cwd, "/plots/totals_AAMC.pdf"), width = 2300, height = 1000, dpi = 300, units = "px")
 ```
+
+```{r}
+tots_plot2 <- tots %>% 
+  ggplot(aes(x = cycle_year, y = percent_change, color = degree, shape = app_status, linetype = factor(app_status))) + 
+  geom_line() + 
+  geom_point(size = 2) + 
+  scale_linetype_manual(values = c("dashed", "solid")) + 
+  scale_shape_manual(values = c(1, 19)) +
+  scale_color_manual(values = c("#004fcf", "#bd0202")) + 
+  scale_x_continuous(breaks = scales::pretty_breaks(n = 10)) + 
+  theme_classic() + 
+  labs(x = "Year", y = "Percent Change Relative to 2012", color = "Degree Option", shape = "Application Status", title = "AAMC Admissions Data") + 
+  theme(axis.text.x = element_text(angle = 45, hjust = 1),
+        plot.title = element_text(hjust = 0.5))
+tots_plot2
+
+# Exporting the graph
+#ggsave(plot = tots_plot2, filename = paste0(cwd, "/plots/totals2_AAMC.png"), width = 1500, height = 1000, dpi = 300, units = "px")
+```
+
+
+
+
 
 # Importing the data for race/ethicity per region and applicants/matriculants over time
 
@@ -198,7 +269,67 @@ race_plot2
 #ggsave(plot = race_plot2, filename = paste0(cwd, "/plots/URMs2_AAMC.pdf"), width = 2500, height = 1600, dpi = 300, units = "px")
 ```
 
+```{r}
+# Graphing
+race_plot3 <- race %>% dplyr::filter(degree == "MD/PhD") %>% 
+  ggplot(aes(x = year, y = percent_urms, color = APSA_region)) + 
+  geom_line() + 
+  geom_point(size = 2) + 
+  facet_wrap(~app_status, ncol = 2) + 
+  scale_color_manual(values = c("#16537e", "#999999", "#6aa84f", "#f44336", "#f6b26b")) + 
+  scale_x_continuous(breaks = scales::pretty_breaks(n = 10)) + 
+  theme_bw() + 
+  labs(x = "Year", y = "Percent URMs", color = "APSA Region", title = "Percent Underrepresented in Medicine (URM)") + 
+  theme(axis.text.x = element_text(angle = 45, hjust = 1),
+        plot.title = element_text(hjust = 0.5))
+race_plot3
 
+# Exporting the graph
+#ggsave(plot = race_plot3, filename = paste0(cwd, "/plots/URMs3_AAMC.png"), width = 2300, height = 1000, dpi = 300, units = "px")
+```
+```{r}
+race2 <- race %>% 
+  dplyr::filter(degree == "MD/PhD") %>% 
+  mutate(
+    southern_status = case_when(
+      APSA_region == "South" ~ "South",
+      APSA_region != "South" ~ "Other Regions"
+    )
+    )
+race2$southern_status <- factor(x = race2$southern_status, levels = c("Other Regions", "South"))
+
+standard_error <- function(x) {
+  std_err = sd(x) / sqrt(length(x))
+  return(std_err)
+}
+
+race2 <- race2 %>% group_by(southern_status, app_status, year) %>% 
+  summarise(
+    mean_percent = mean(percent_urms),
+    sem_percent = standard_error(percent_urms)
+  )
+```
+
+```{r}
+# Graphing MD/PhD only 
+race_plot4 <- race2 %>% 
+  ggplot(aes(x = year, y = mean_percent, ymin = mean_percent - sem_percent, ymax = mean_percent + sem_percent, color = southern_status, shape = app_status, linetype = factor(app_status))) + 
+  geom_errorbar(width = 0.2, linetype = "solid") +
+  geom_line() + 
+  geom_point(size = 2) + 
+  scale_linetype_manual(values = c("dashed", "solid")) + 
+  scale_shape_manual(values = c(1, 19)) +
+  scale_color_manual(values = c("#d1d1d1", "#bd0202")) + 
+  scale_x_continuous(breaks = scales::pretty_breaks(n = 10)) + 
+  theme_classic() + 
+  labs(x = "Year", y = "Percent URM", color = "Region", shape = "Application Status", title = "MD/PhD URM Admissions") + 
+  theme(axis.text.x = element_text(angle = 45, hjust = 1),
+        plot.title = element_text(hjust = 0.5))
+race_plot4
+
+# Exporting the graph
+#ggsave(plot = race_plot4, filename = paste0(cwd, "/plots/URMs4_AAMC.pdf"), width = 1500, height = 1000, dpi = 300, units = "px")
+```
 
 
 
