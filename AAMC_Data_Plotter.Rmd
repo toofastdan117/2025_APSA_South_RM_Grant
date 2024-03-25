@@ -18,6 +18,91 @@ library(stringr)
 cwd = getwd()
 ```
 
+
+
+# Importing the required files for number of applicants over time
+
+```{r}
+# Importing and cleaning the MD data 
+mdtotals <- read_xlsx(path = paste0(cwd, "/merged files/AAMC A-1 Totals Merged.xlsx"))
+mdtotals$degree <- "MD"
+md_app_baseline <- mdtotals[mdtotals$cycle_year == 2012, ]$applicants
+mdtotals$percent_applicants_change <- ((mdtotals$applicants - md_app_baseline) / md_app_baseline) * 100
+md_mat_baseline <- mdtotals[mdtotals$cycle_year == 2012, ]$matriculants
+mdtotals$percent_matriculants_change <- ((mdtotals$matriculants - md_mat_baseline) / md_mat_baseline) * 100
+
+# Importing and cleaning the MD/PhD data 
+mdphdtotals <- read_xlsx(path = paste0(cwd, "/merged files/AAMC B-8 Totals Merged.xlsx"))
+mdphdtotals$degree <- "MD/PhD"
+mdphd_app_baseline <- mdphdtotals[mdphdtotals$cycle_year == 2012, ]$applicants
+mdphdtotals$percent_applicants_change <- ((mdphdtotals$applicants - mdphd_app_baseline) / mdphd_app_baseline) * 100
+mdphd_mat_baseline <- mdphdtotals[mdphdtotals$cycle_year == 2012, ]$matriculants
+mdphdtotals$percent_matriculants_change <- ((mdphdtotals$matriculants - mdphd_mat_baseline) / mdphd_mat_baseline) * 100
+
+# Merging and tidying
+tots <- dplyr::bind_rows(mdtotals, mdphdtotals)
+tots <- tots %>% pivot_longer(cols = c(percent_applicants_change, percent_matriculants_change), names_to = "percent_columns", values_to = "percent_change")
+tots[c("per", "app_status", "chan")] = str_split_fixed(string = tots$percent_columns, pattern = "_", 3)
+```
+
+```{r}
+# Graphing percent change in applicants/matriculants over time for MD and MD/PhD schools
+tots_plot <- tots %>% ggplot(aes(x = cycle_year, y = percent_change, color = degree)) + 
+  geom_line() + 
+  geom_point(size = 2) + 
+  facet_wrap(~app_status, ncol = 2) + 
+  scale_color_manual(values = c("#01016f", "#d8031c")) + 
+  scale_x_continuous(breaks = scales::pretty_breaks(n = 10)) + 
+  theme_bw() + 
+  labs(x = "Year", y = "Percent Change Relative to 2012", color = "Degree", title = "Trends in MD & MD/PhD Applicants and Matriculants") + 
+  theme(axis.text.x = element_text(angle = 45, hjust = 1),
+        plot.title = element_text(hjust = 0.5))
+tots_plot
+ 
+# Exporting the graph
+#ggsave(plot = tots_plot, filename = paste0(cwd, "/plots/totals_AAMC.pdf"), width = 2300, height = 1000, dpi = 300, units = "px")
+```
+
+```{r}
+tots_plot2 <- tots %>% 
+  ggplot(aes(x = cycle_year, y = percent_change, color = degree, shape = app_status, linetype = factor(app_status))) + 
+  geom_line() + 
+  geom_point(size = 2) + 
+  scale_linetype_manual(values = c("dashed", "solid")) + 
+  scale_shape_manual(values = c(1, 19)) +
+  scale_color_manual(values = c("#004fcf", "#bd0202")) + 
+  scale_x_continuous(breaks = scales::pretty_breaks(n = 10)) + 
+  theme_classic() + 
+  labs(x = "Year", y = "Percent Change Relative to 2012", color = "Degree Option", shape = "Application Status", title = "AAMC Admissions Data") + 
+  theme(axis.text.x = element_text(angle = 45, hjust = 1),
+        plot.title = element_text(hjust = 0.5))
+tots_plot2
+
+# Exporting the graph
+#ggsave(plot = tots_plot2, filename = paste0(cwd, "/plots/totals2_AAMC.pdf"), width = 1500, height = 1000, dpi = 300, units = "px")
+```
+
+```{r}
+tots_plot3 <- tots %>% 
+  dplyr::filter(app_status == "applicants") %>% 
+  ggplot(aes(x = cycle_year, y = percent_change, color = degree)) + 
+  geom_line() + 
+  geom_point(size = 2) +
+  scale_color_manual(values = c("#004fcf", "#bd0202")) + 
+  scale_x_continuous(breaks = scales::pretty_breaks(n = 10)) + 
+  theme_classic() + 
+  labs(x = "Year", y = "Percent Change Relative to 2012", color = "Degree", title = "AAMC Applicants Data") + 
+  theme(axis.text.x = element_text(angle = 45, hjust = 1),
+        plot.title = element_text(hjust = 0.5))
+tots_plot3
+
+# Exporting the graph
+ggsave(plot = tots_plot3, filename = paste0(cwd, "/plots/totals3_AAMC.pdf"), width = 1350, height = 1000, dpi = 300, units = "px")
+```
+
+
+
+
 # Importing required files for male/female data 
 
 ```{r}
@@ -122,73 +207,6 @@ mf_plot3
 
 
 
-
-# Importing the required files for number of applicants over time
-
-```{r}
-# Importing and cleaning the MD data 
-mdtotals <- read_xlsx(path = paste0(cwd, "/merged files/AAMC A-1 Totals Merged.xlsx"))
-mdtotals$degree <- "MD"
-md_app_baseline <- mdtotals[mdtotals$cycle_year == 2012, ]$applicants
-mdtotals$percent_applicants_change <- ((mdtotals$applicants - md_app_baseline) / md_app_baseline) * 100
-md_mat_baseline <- mdtotals[mdtotals$cycle_year == 2012, ]$matriculants
-mdtotals$percent_matriculants_change <- ((mdtotals$matriculants - md_mat_baseline) / md_mat_baseline) * 100
-
-# Importing and cleaning the MD/PhD data 
-mdphdtotals <- read_xlsx(path = paste0(cwd, "/merged files/AAMC B-8 Totals Merged.xlsx"))
-mdphdtotals$degree <- "MD/PhD"
-mdphd_app_baseline <- mdphdtotals[mdphdtotals$cycle_year == 2012, ]$applicants
-mdphdtotals$percent_applicants_change <- ((mdphdtotals$applicants - mdphd_app_baseline) / mdphd_app_baseline) * 100
-mdphd_mat_baseline <- mdphdtotals[mdphdtotals$cycle_year == 2012, ]$matriculants
-mdphdtotals$percent_matriculants_change <- ((mdphdtotals$matriculants - mdphd_mat_baseline) / mdphd_mat_baseline) * 100
-
-# Merging and tidying
-tots <- dplyr::bind_rows(mdtotals, mdphdtotals)
-tots <- tots %>% pivot_longer(cols = c(percent_applicants_change, percent_matriculants_change), names_to = "percent_columns", values_to = "percent_change")
-tots[c("per", "app_status", "chan")] = str_split_fixed(string = tots$percent_columns, pattern = "_", 3)
-```
-
-```{r}
-# Graphing percent change in applicants/matriculants over time for MD and MD/PhD schools
-tots_plot <- tots %>% ggplot(aes(x = cycle_year, y = percent_change, color = degree)) + 
-  geom_line() + 
-  geom_point(size = 2) + 
-  facet_wrap(~app_status, ncol = 2) + 
-  scale_color_manual(values = c("#01016f", "#d8031c")) + 
-  scale_x_continuous(breaks = scales::pretty_breaks(n = 10)) + 
-  theme_bw() + 
-  labs(x = "Year", y = "Percent Change Relative to 2012", color = "Degree", title = "Trends in MD & MD/PhD Applicants and Matriculants") + 
-  theme(axis.text.x = element_text(angle = 45, hjust = 1),
-        plot.title = element_text(hjust = 0.5))
-tots_plot
- 
-# Exporting the graph
-#ggsave(plot = tots_plot, filename = paste0(cwd, "/plots/totals_AAMC.pdf"), width = 2300, height = 1000, dpi = 300, units = "px")
-```
-
-```{r}
-tots_plot2 <- tots %>% 
-  ggplot(aes(x = cycle_year, y = percent_change, color = degree, shape = app_status, linetype = factor(app_status))) + 
-  geom_line() + 
-  geom_point(size = 2) + 
-  scale_linetype_manual(values = c("dashed", "solid")) + 
-  scale_shape_manual(values = c(1, 19)) +
-  scale_color_manual(values = c("#004fcf", "#bd0202")) + 
-  scale_x_continuous(breaks = scales::pretty_breaks(n = 10)) + 
-  theme_classic() + 
-  labs(x = "Year", y = "Percent Change Relative to 2012", color = "Degree Option", shape = "Application Status", title = "AAMC Admissions Data") + 
-  theme(axis.text.x = element_text(angle = 45, hjust = 1),
-        plot.title = element_text(hjust = 0.5))
-tots_plot2
-
-# Exporting the graph
-#ggsave(plot = tots_plot2, filename = paste0(cwd, "/plots/totals2_AAMC.png"), width = 1500, height = 1000, dpi = 300, units = "px")
-```
-
-
-
-
-
 # Importing the data for race/ethicity per region and applicants/matriculants over time
 
 ```{r}
@@ -287,6 +305,7 @@ race_plot3
 # Exporting the graph
 #ggsave(plot = race_plot3, filename = paste0(cwd, "/plots/URMs3_AAMC.png"), width = 2300, height = 1000, dpi = 300, units = "px")
 ```
+
 ```{r}
 race2 <- race %>% 
   dplyr::filter(degree == "MD/PhD") %>% 
@@ -333,9 +352,105 @@ race_plot4
 
 
 
+# Making a combined race gender plot for the south region
 
+```{r}
+# Filtering for only females in the south
+mf_gb3 <- mf_gb %>% dplyr::filter(sex == "female", app_status == "applicant", degree == "MD/PhD", APSA_region == "South")
+mf_gb3$demo <- "Female Applicants"
+race3 <- race %>% dplyr::filter(app_status == "Applicants", degree == "MD/PhD", APSA_region == "South")
+race3$demo <- "URM Applicants"
+colnames(race3) <- c("degree", "app_status", "APSA_region", "cycle_year", "sum_URMs", "sum_natives", "sum_black", "sum_hispanic", "sum_islander", "sum_white", "sum_asian", "sum_other", "sum_multi", "sum_unk", "sum_notusa", "sum_tots", "percent", "demo") #need to change names before merge
 
+# Merging
+ferace <- dplyr::bind_rows(mf_gb3, race3)
+ferace$demo <- factor(x = ferace$demo, levels = c("Female Applicants", "URM Applicants"))
+```
 
+```{r}
+# Graphing female and URM MD/PhD applicants over time
+ferace_plot <- ferace %>% 
+  ggplot(aes(x = cycle_year, y = percent, color = demo)) + 
+  geom_line() + 
+  geom_point(size = 2) + 
+  scale_color_manual(values = c("#bd0202", "#004fcf")) + 
+  scale_x_continuous(breaks = scales::pretty_breaks(n = 10)) + 
+  theme_classic() + 
+  labs(x = "Year", y = "Percent Applicants", color = "Demographics", title = "Female and URM Applicants to South MD/PhD Programs") + 
+  theme(axis.text.x = element_text(angle = 45, hjust = 1),
+        plot.title = element_text(hjust = 0.5))
+ferace_plot
+
+# Exporting the graph
+#ggsave(plot = ferace_plot, filename = paste0(cwd, "/plots/Female_Race1.pdf"), width = 1500, height = 1000, dpi = 300, units = "px")
+```
+
+# Making a South region and non-south region plot of female and URM applicants
+
+```{r}
+mf_gb4 <- mf_gb %>% dplyr::filter(sex == "female", app_status == "applicant", degree == "MD/PhD") %>% 
+  mutate(
+    southern_status = case_when(
+      APSA_region == "South" ~ "South Female",
+      APSA_region != "South" ~ "Other-Regions Female"
+    )
+    )
+
+standard_error <- function(x) {
+  std_err = sd(x) / sqrt(length(x))
+  return(std_err)
+}
+
+mf_gb4 <- mf_gb4 %>% group_by(southern_status, cycle_year) %>% 
+  summarise(
+    mean_percent = mean(percent),
+    sem_percent = standard_error(percent)
+  )
+
+race4 <- race %>% dplyr::filter(app_status == "Applicants", degree == "MD/PhD") %>% 
+  mutate(
+    southern_status = case_when(
+      APSA_region == "South" ~ "South URM",
+      APSA_region != "South" ~ "Other-Regions URM"
+    )
+  )
+
+race4 <- race4 %>% group_by(southern_status, year) %>% 
+  summarise(
+    mean_percent = mean(percent_urms),
+    sem_percent = standard_error(percent_urms)
+  )
+
+colnames(race4) <- c("southern_status", "cycle_year", "mean_percent", "sem_percent")
+
+# Merging
+ferace2 <- dplyr::bind_rows(mf_gb4, race4)
+ferace2[c("Region", "Demographics")] = str_split_fixed(string = ferace2$southern_status, pattern = " ", 2)
+ferace2$southern_status <- factor(x = ferace2$southern_status, levels = c("South Female", "Other-Regions Female", "South URM", "Other-Regions URM"))
+ferace2$Region <- factor(x = ferace2$Region, levels = c("South", "Other-Regions"))
+ferace2$Demographics <- factor(x = ferace2$Demographics, levels = c("Female", "URM"))
+```
+
+```{r}
+# Graphing Female and URM Applicants to MD/PhD programs and Highlighting the SOUTH
+ferace_plot2 <- ferace2 %>% 
+  ggplot(aes(x = cycle_year, y = mean_percent, ymin = mean_percent - sem_percent, ymax = mean_percent + sem_percent, color = southern_status, shape = Demographics)) + 
+  geom_errorbar(width = 0.2, linetype = "solid") +
+  geom_line() + 
+  geom_point(size = 2) + 
+  #ylim(0, 55) +
+  scale_x_continuous(breaks = scales::pretty_breaks(n = 10)) + 
+  scale_y_continuous(limits = c(0, 52), breaks = seq(0, 52, by = 10)) +
+  scale_color_manual(values = c("#bd0202", "#feb3b3", "#01016f", "#b3b3fe")) + 
+  theme_classic() + 
+  labs(x = "Year", y = "Percent Applicants", color = "Regions", title = "Female and URM Applicants to MD/PhD Programs") + 
+  theme(axis.text.x = element_text(angle = 45, hjust = 1),
+        plot.title = element_text(hjust = 0.5))
+ferace_plot2
+
+# Exporting the graph
+ggsave(plot = ferace_plot2, filename = paste0(cwd, "/plots/Female_Race2.pdf"), width = 1600, height = 1000, dpi = 300, units = "px")
+```
 
 
 

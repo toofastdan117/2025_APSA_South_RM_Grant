@@ -2,6 +2,7 @@
 AAMC Data.Rproj
 .Rhistory
 .RData
+plots/*.tif
 
 # Folders to ignore 
 /.Rproj.user
